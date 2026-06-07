@@ -7,20 +7,58 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build APK with Buildozer Action
-      uses: ArtemSBulgakov/buildozer-action@v1
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
       with:
-        workdir: .
-        buildozer_version: stable
+        distribution: 'temurin'
+        java-version: '17'
 
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Buildozer dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev sqlite3 libbz2-dev
+
+    - name: Install Buildozer and Cython
+      run: |
+        pip install --upgrade pip
+        pip install buildozer cython virtualenv
+
+    - name: Set up Android SDK Command-line Tools
+      run: |
+        # Create standard legacy paths Buildozer searches for
+        mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
+        mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+        
+        # Download stable command line tools package
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        unzip cmdline-tools.zip
+        
+        # Place sdkmanager exactly where Buildozer expects the legacy binary layout
+        cp cmdline-tools/bin/sdkmanager ~/.buildozer/android/platform/android-sdk/tools/bin/ || true
+        cp -r cmdline-tools/* ~/.buildozer/android/platform/android-sdk/tools/ || true
+        
+        # Pre-accept all standard licenses
+        echo -e "8933bad161ad75d6985447a1f655615f4d41a87a\n24333f1a0b3bfa11969905c38b945a7272cd228d\nd56f17decc40b64bf28b672efd02b1891460d725" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+
+    - name: Build with Buildozer
+      run: |
+        export FORCE_BUILD__ALLOW_ROOT=1
+        buildozer -v android debug
+        
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: game-apk
         path: bin/*.apk
+        
