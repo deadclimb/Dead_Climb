@@ -28,9 +28,20 @@ jobs:
         pip install --upgrade pip
         pip install buildozer cython virtualenv
 
-    - name: Pre-accept Android SDK Licenses
+    - name: Pre-configure Android SDK and sdkmanager
       run: |
+        # Create standard buildozer SDK paths
+        mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
         mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+        
+        # Download official Android command line tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        unzip cmdline-tools.zip
+        
+        # Move tools to where buildozer looks for them
+        cp -r cmdline-tools/* ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/
+        
+        # Pre-accept all necessary licenses
         echo -e "8933bad161ad75d6985447a1f655615f4d41a87a\n24333f1a0b3bfa11969905c38b945a7272cd228d\nd56f17decc40b64bf28b672efd02b1891460d725" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
 
     - name: Build with Buildozer
@@ -43,3 +54,4 @@ jobs:
       with:
         name: game-apk
         path: bin/*.apk
+        
